@@ -1,0 +1,6 @@
+docker run -d --name pg-templates \
+-e POSTGRES_PASSWORD=pwd \
+-e POSTGRES_USER=usr \
+-e POSTGRES_DB=templatesDB \
+-p 5431:5432 \
+postgres:13
