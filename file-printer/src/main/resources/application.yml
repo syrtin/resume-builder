@@ -1,0 +1,61 @@
+app:
+  temp-files-dir: temp/
+
+  base-url: http://localhost:8081
+
+  rabbitmq:
+    exchange: resume.exchange
+    request-routing-key: resume.request
+    response-routing-key: resume.response
+    request-queue: resume.request.queue
+    response-queue: resume.response.queue
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: file-printer
+
+  datasource:
+    url: jdbc:postgresql://localhost:5431/templatesDB
+    username: usr
+    password: pwd
+  flyway:
+    enabled: true
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: usr
+    password: pwd
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health
+      base-path: /
+      path-mapping:
+        prometheus: /metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    defaults:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.amqp: debug
+    org.springframework.web: debug
+    org.springframework.boot.actuate.metrics: debug
+    io.micrometer: debug
+  file:
+    name:
+      ./log/file-printer.log

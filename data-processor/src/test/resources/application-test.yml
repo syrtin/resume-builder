@@ -1,0 +1,29 @@
+app:
+  rabbitmq:
+    host: localhost
+    port: ${RABBITMQ_PORT:5672}
+    username: guest
+    password: guest
+    exchange: resume.exchange
+    request-routing-key: resume.request
+    response-routing-key: resume.response
+    request-queue: resume.request.queue
+    response-queue: resume.response.queue
+    sleep-timeout: 10000
+
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:13:///testВb
+    username: usr
+    password: pwd
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  flyway:
+    enabled: false

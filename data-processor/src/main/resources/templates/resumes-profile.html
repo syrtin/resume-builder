@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Профиль пользователя</title>
+    <style>
+        .resume-list {
+            display: flex;
+            flex-direction: column;
+        }
+        .resume-item {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .resume-item img {
+            width: 100px;
+            height: 100px;
+            margin-right: 10px;
+        }
+        .resume-info {
+            display: flex;
+            flex: 1;
+            align-items: center;
+        }
+        .edit-button, .create-button, .delete-button, .print-button {
+            background-color: blue;
+            color: white;
+            padding: 10px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+        .delete-button {
+            background-color: red;
+        }
+        .print-button {
+            background-color: green;
+        }
+    </style>
+</head>
+<body>
+<h1>Ваши резюме</h1>
+<div id="resumeList" class="resume-list"></div>
+<button class="create-button" onclick="window.location.href='/resumes/new'">Создать новое резюме</button>
+
+<script>
+    async function fetchResumes() {
+        const response = await fetch('/api/resumes');
+        const data = await response.json();
+        const resumeList = document.getElementById('resumeList');
+        resumeList.innerHTML = '';
+
+        for (let resume of data) {
+            const resumeItem = document.createElement('div');
+            resumeItem.className = 'resume-item';
+
+            let photoSrc = '/img/your-photo.png';
+            if (resume.photoId) {
+                const photoResponse = await fetch(`/api/photos/${resume.photoId}`);
+                const photoData = await photoResponse.json();
+                photoSrc = 'data:image/jpeg;base64,' + photoData.photoData;
+            }
+
+            let templateSrc = '';
+            let templateDescription = '';
+            if (resume.templateId) {
+                const templateResponse = await fetch(`/api/templates/${resume.templateId}`);
+                const templateData = await templateResponse.json();
+                templateSrc = 'data:image/jpeg;base64,' + templateData.imageData;
+                templateDescription = templateData.description;
+            }
+
+            resumeItem.innerHTML = `
+                <img src="${photoSrc}" alt="Фото">
+                <img src="${templateSrc}" alt="Шаблон" title="${templateDescription}" style="margin-right: 10px;">
+                <div>
+                    <strong>${resume.fullName}</strong>
+                    <p>Создано: ${new Date(resume.createdAt).toLocaleString('ru-RU', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                    <p>Изменено: ${new Date(resume.modifiedAt).toLocaleString('ru-RU', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                </div>
+                <button class="edit-button" onclick="window.location.href='/resumes/${resume.id}/edit'">Редактировать</button>
+                <button class="delete-button" onclick="deleteResume(${resume.id})">Удалить</button>
+                <button class="print-button" onclick="printResume(${resume.id})">Печать</button>
+            `;
+
+            resumeList.appendChild(resumeItem);
+        }
+    }
+
+    async function deleteResume(id) {
+        if (confirm('Вы уверены, что хотите удалить это резюме?')) {
+            try {
+                const response = await fetch(`/api/resumes/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    alert('Резюме успешно удалено.');
+                    window.location.reload();
+                } else {
+                    throw new Error('Ошибка при удалении резюме.');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при попытке удаления резюме.');
+            }
+        }
+    }
+
+    async function printResume(id) {
+        try {
+            const response = await fetch(`/api/resumes/${id}/print`);
+            const printResponse = await response.json();
+
+            if (response.ok && printResponse.link) {
+                const isUserAgree = confirm('Файл готов к печати. Хотите сохранить?');
+                if (isUserAgree) {
+                    const tempLink = document.createElement('a');
+                    tempLink.href = printResponse.link;
+                    tempLink.setAttribute('download', '');
+                    document.body.appendChild(tempLink);
+                    tempLink.click();
+                    document.body.removeChild(tempLink);
+                }
+            } else {
+                throw new Error('Ошибка при получении данных для печати.');
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            alert('Произошла ошибка при попытке получить данные для печати.');
+        }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', fetchResumes);
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+version: '3.8'
+services:
+  data-processor:
+    build:
+      context: ./data-processor
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://maindatadb:5432/mainDataDB
+      SPRING_DATASOURCE_USERNAME: usr
+      SPRING_DATASOURCE_PASSWORD: pwd
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: usr
+      SPRING_RABBITMQ_PASSWORD: pwd
+    depends_on:
+      - maindatadb
+      - rabbitmq
+
+  file-printer:
+    build:
+      context: ./file-printer
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://templatesdb:5432/templatesDB
+      SPRING_DATASOURCE_USERNAME: usr
+      SPRING_DATASOURCE_PASSWORD: pwd
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: usr
+      SPRING_RABBITMQ_PASSWORD: pwd
+    depends_on:
+      - templatesdb
+      - rabbitmq
+
+  maindatadb:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: mainDataDB
+      POSTGRES_USER: usr
+      POSTGRES_PASSWORD: pwd
+    volumes:
+      - maindatadb-data:/var/lib/postgresql/data
+
+  templatesdb:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: templatesDB
+      POSTGRES_USER: usr
+      POSTGRES_PASSWORD: pwd
+    volumes:
+      - templatesdb-data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    environment:
+      RABBITMQ_DEFAULT_USER: usr
+      RABBITMQ_DEFAULT_PASS: pwd
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+volumes:
+  maindatadb-data:
+  templatesdb-data:
