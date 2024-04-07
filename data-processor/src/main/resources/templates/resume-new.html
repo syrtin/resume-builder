@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Создание Резюме</title>
+    <style>
+        .section { margin-bottom: 20px; }
+        .add-button, .button { cursor: pointer; color: blue; text-decoration: underline; }
+        .modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 80%; }
+    </style>
+</head>
+<body>
+<h1>Заполните ваше резюме</h1>
+<form id="resumeForm">
+    <div class="section">
+        <label>Фото:</label><br>
+        <div>
+            <img id="currentPhoto" src="/img/your-photo.png" alt="Текущее фото" style="width: 100px; height: 100px;"/>
+        </div>
+        <div>
+            <button type="button" class="button" id="selectPhotoButton">Выбрать фото</button>
+        </div>
+    </div>
+    <div class="section">
+        <label>Шаблон:</label><br>
+        <img id="currentTemplate" src="" alt="Текущий шаблон" style="width: 100px; height: 100px;"/><br>
+        <div id="currentTemplateDescription"></div><br>
+        <button type="button" class="button" id="selectTemplateButton">Выбрать шаблон</button>
+    </div>
+    <div class="section">
+        <label for="fullName">ФИО:</label><br>
+        <input type="text" id="fullName" name="fullName"><br>
+    </div>
+    <div class="section">
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email"><br>
+    </div>
+    <div class="section">
+        <label for="skills">Навыки:</label><br>
+        <input type="text" id="skills" name="skills"><br>
+    </div>
+    <div class="section">
+        <label for="objective">Цель:</label><br>
+        <input type="text" id="objective" name="objective"><br>
+    </div>
+    <div class="section">
+        <label for="interests">Интересы:</label><br>
+        <input type="text" id="interests" name="interests"><br>
+    </div>
+
+    <div id="educationSection">
+        <h2>Образование:</h2>
+        <div class="educationItem section">
+            <label>Степень:</label><br>
+            <input type="text" name="degree[]"><br>
+            <label>Учебное заведение:</label><br>
+            <input type="text" name="institution[]"><br>
+            <label>Год окончания:</label><br>
+            <input type="number" name="yearCompleted[]"><br>
+        </div>
+        <div class="add-button" onclick="addSection('education')">+ Добавить образование</div>
+    </div>
+
+    <div id="workExperienceSection">
+        <h2>Опыт работы:</h2>
+        <div class="workExperienceItem section">
+            <label>Название компании:</label><br>
+            <input type="text" name="companyName[]"><br>
+            <label>Должность:</label><br>
+            <input type="text" name="position[]"><br>
+            <label>Дата начала работы:</label><br>
+            <input type="date" name="startDate[]"><br>
+            <label>Дата окончания работы:</label><br>
+            <input type="date" name="endDate[]"><br>
+        </div>
+        <div class="add-button" onclick="addSection('workExperience')">+ Добавить опыт работы</div>
+    </div>
+
+    <button type="submit">Отправить</button>
+</form>
+<div id="photoModal" class="modal">
+    <div class="modal-content">
+        <h2>Выберите фото</h2>
+        <div id="photoList">Загрузка...</div>
+        <input type="file" id="newPhoto" style="display: none;">
+        <button class="button" id="uploadNewPhoto">Загрузить новое</button>
+        <button class="button" id="closePhotoModal">Закрыть</button>
+    </div>
+</div>
+<div id="templateModal" class="modal">
+    <div class="modal-content">
+        <h2>Выберите шаблон</h2>
+        <div id="templateList">Загрузка...</div>
+        <button class="button" id="closeTemplateModal">Закрыть</button>
+    </div>
+</div>
+
+<script>
+    document.getElementById('selectPhotoButton').addEventListener('click', () => {
+        openPhotoModal();
+        document.getElementById('photoModal').style.display = 'block';
+    });
+    document.getElementById('closePhotoModal').addEventListener('click', () => {
+        document.getElementById('photoModal').style.display = 'none';
+    });
+    document.getElementById('uploadNewPhoto').addEventListener('change', uploadNewPhoto);
+    document.getElementById('uploadNewPhoto').addEventListener('click', function () {
+        document.getElementById('newPhoto').click();
+    });
+    document.getElementById('selectTemplateButton').addEventListener('click', () => {
+        document.getElementById('templateModal').style.display = 'block';
+    });
+    document.getElementById('closeTemplateModal').addEventListener('click', () => {
+        document.getElementById('templateModal').style.display = 'none';
+    });
+
+    document.getElementById('newPhoto').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        fetch('/api/uploadPhoto', {
+            method: 'POST',
+            body: formData
+        }).then(response => {
+            if (response.ok) {
+                openPhotoModal();
+            } else {
+                alert('Ошибка при загрузке фото');
+            }
+        }).catch(error => console.error('Ошибка загрузки фото: ', error));
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        selectFirstTemplate();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetch('/api/templates')
+            .then(response => response.json())
+            .then(templates => {
+                const templateList = document.getElementById('templateList');
+                templateList.innerHTML = '';
+                templates.forEach(template => {
+                    const img = document.createElement('img');
+                    img.src = 'data:image/jpeg;base64,' + template.imageData;
+                    img.style.width = '100px';
+                    img.style.margin = '5px';
+                    img.style.cursor = 'pointer';
+                    img.alt = template.name;
+                    if (template.description !== null) {
+                        img.title = template.description;
+                    }
+                    img.onclick = () => {
+                        selectTemplate(template.id, img.src, template.description);
+                        document.getElementById('templateModal').style.display = 'none';
+                    };
+                    templateList.appendChild(img);
+                });
+            });
+    });
+
+
+    function openPhotoModal() {
+        const photoList = document.getElementById('photoList');
+        photoList.innerHTML = '';
+
+        const defaultPhoto = document.createElement('img');
+        defaultPhoto.src = '/img/your-photo.png';
+        defaultPhoto.style.width = '100px';
+        defaultPhoto.style.margin = '5px';
+        defaultPhoto.style.cursor = 'pointer';
+        defaultPhoto.alt = 'Фото по умолчанию';
+        defaultPhoto.onclick = () => selectPhoto(null, '/img/your-photo.png');
+        photoList.appendChild(defaultPhoto);
+
+        fetch('/api/photos')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(photo => {
+                    const img = document.createElement('img');
+                    img.src = 'data:photo/jpeg;base64,' + photo.photoData;
+                    img.style.width = '100px';
+                    img.style.margin = '5px';
+                    img.style.cursor = 'pointer';
+                    img.onclick = () => selectPhoto(photo.id, img.src);
+                    photoList.appendChild(img);
+                });
+                document.getElementById('photoModal').style.display = 'block';
+            });
+    }
+
+    function uploadNewPhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        fetch('/api/uploadPhoto', {
+            method: 'POST',
+            body: formData
+        }).then(response => {
+            if (response.ok) {
+                openPhotoModal();
+            } else {
+                alert('Ошибка при загрузке фото');
+            }
+        });
+    }
+
+    function selectPhoto(photoId, photoUrl) {
+        document.getElementById('currentPhoto').src = photoUrl;
+        const hiddenInput = document.getElementById('photoId') || document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.id = 'photoId';
+        hiddenInput.name = 'photoId';
+        hiddenInput.value = photoId;
+        document.getElementById('resumeForm').appendChild(hiddenInput);
+        document.getElementById('photoModal').style.display = 'none';
+    }
+
+    function selectFirstTemplate() {
+        fetch('/api/templates')
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    selectTemplate(data[0].id, 'data:image/jpeg;base64,' + data[0].imageData, data[0].description);
+                }
+            }).catch(error => console.error('Ошибка при получении шаблонов: ', error));
+    }
+
+    function selectTemplate(templateId, templateUrl, templateDescription) {
+        document.getElementById('currentTemplate').src = templateUrl;
+        document.getElementById('currentTemplateDescription').textContent = templateDescription;
+        let hiddenInput = document.getElementById('templateId');
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.id = 'templateId';
+            hiddenInput.name = 'templateId';
+            document.getElementById('resumeForm').appendChild(hiddenInput);
+        }
+        hiddenInput.value = templateId;
+    }
+
+    function addSection(type) {
+        const container = document.getElementById(type + 'Section');
+        const newItem = container.getElementsByClassName(type + 'Item')[0].cloneNode(true);
+        newItem.querySelectorAll('input').forEach(input => input.value = '');
+        container.insertBefore(newItem, container.lastElementChild);
+    }
+
+    document.getElementById('resumeForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const form = event.target;
+        console.log(form);
+        const formData = new FormData(form);
+
+        const resumeData = {
+            fullName: formData.get('fullName'),
+            email: formData.get('email'),
+            skills: formData.get('skills'),
+            objective: formData.get('objective'),
+            interests: formData.get('interests'),
+            educations: [],
+            workExperiences: [],
+            photoId: formData.get('photoId'),
+            templateId: formData.get('templateId')
+        };
+
+        console.log(resumeData);
+
+        const addSections = (selector, fieldNames, outputArray) => {
+            document.querySelectorAll(selector).forEach((item, index) => {
+                let sectionData = {};
+                let isEmpty = true;
+
+                fieldNames.forEach(fieldName => {
+                    const input = item.querySelector(`[name="${fieldName}[]"]`);
+                    if (input) {
+                        const value = input.value.trim();
+                        if (value) {
+                            isEmpty = false;
+                        }
+                        sectionData[fieldName] = value;
+                    }
+                });
+
+                if (!isEmpty || index === 0) {
+                    outputArray.push(sectionData);
+                }
+            });
+        };
+
+        addSections('.educationItem', ['degree', 'institution', 'yearCompleted'], resumeData.educations);
+        addSections('.workExperienceItem', ['companyName', 'position', 'startDate', 'endDate'], resumeData.workExperiences);
+
+        document.getElementById('selectPhotoButton').addEventListener('click', function() {
+            fetch('/api/photos')
+                .then(response => response.json())
+                .then(data => {
+                    const photoList = document.getElementById('photoList');
+                    photoList.innerHTML = '';
+                    data.forEach(photo => {
+                        const img = document.createElement('img');
+                        img.src = 'data:photo/jpeg;base64,' + photo.photoData;
+                        img.style.width = '100px';
+                        img.onclick = () => selectPhoto(photo.id, img.src);
+                        photoList.appendChild(img);
+                    });
+                    document.getElementById('photoModal').style.display = 'block';
+                });
+        });
+
+        fetch('/api/resumes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(resumeData)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Сетевой запрос для /api/resumes не удался');
+                }
+                return response.text();
+            })
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    console.log('Успешно:', data);
+                    alert('Резюме сохранено!');
+                    window.location.href = '/resumes';
+                } catch (err) {
+                    console.error('Ошибка при разборе JSON:', err);
+                }
+            })
+            .catch((error) => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при сохранении резюме.');
+            });
+
+    });
+</script>
+</body>
+</html>
